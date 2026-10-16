@@ -225,6 +225,10 @@ una respuesta de su pagina de acceso no es un error del endpoint ASP.NET Core.
 9. Al fusionar en `main`, CI vuelve a validar y, solo si termina bien, CD ejecuta
    `vercel deploy --prod --yes`. Vercel construye la imagen desde ese checkout;
    no se usa `--prebuilt`, que omite la construccion remota necesaria.
+   Despues se verifican `/health` y el JSON de `/api/products` en el despliegue
+   real mediante `vercel curl` (compatible con Deployment Protection). Si la
+   API falla al iniciar o devuelve una respuesta invalida, CD falla aunque
+   Vercel haya aceptado la construccion.
 10. Consulta la URL en el resumen de Actions y el ambiente `production`.
     Tambien puedes iniciar el workflow manualmente desde `main`.
 
