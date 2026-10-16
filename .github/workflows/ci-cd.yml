@@ -111,11 +111,11 @@ jobs:
         run: |
           set -euo pipefail
           npx --no-install vercel curl /health \
-            --deployment "$DEPLOYMENT_URL" --token "$VERCEL_TOKEN" -- \
+            --deployment "$DEPLOYMENT_URL" -- \
             --fail --silent --show-error --retry 10 --retry-all-errors \
             --retry-delay 3 --connect-timeout 5 --max-time 15 --retry-max-time 120
           npx --no-install vercel curl /api/products \
-            --deployment "$DEPLOYMENT_URL" --token "$VERCEL_TOKEN" -- \
+            --deployment "$DEPLOYMENT_URL" -- \
             --fail --silent --show-error --connect-timeout 5 --max-time 15 \
             --output products.json
           node --input-type=module -e "
