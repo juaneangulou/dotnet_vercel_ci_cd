@@ -192,6 +192,49 @@ Los cambios de variables en Vercel requieren un nuevo despliegue. No uses
 Si Deployment Protection esta activo, autentica las comprobaciones con Vercel;
 una respuesta de su pagina de acceso no es un error del endpoint ASP.NET Core.
 
+### Configurar variables y verificar el despliegue desde PowerShell
+
+Con la sesion del CLI iniciada y el proyecto vinculado, puedes completar
+la configuracion sin usar el dashboard:
+
+```powershell
+npx vercel env ls production
+npx vercel env add App__Name production --value "Clean API" --yes
+npx vercel env add App__SupportEmail production --value "soporte@example.com" --yes
+npx vercel env add Swagger__Enabled production --value "true" --yes
+npx vercel env add PORT production --value "8080" --yes
+npx vercel deploy --prod
+```
+
+Estos son valores de demostracion; reemplaza el nombre y correo por los tuyos.
+Si una variable ya existe, editala desde el dashboard o agrega `--force` al
+comando correspondiente solo si deseas sobrescribirla. Los comandos con
+`--value` anteriores contienen configuracion publica; no pases credenciales
+de esa forma porque pueden quedar en el historial de la terminal.
+
+Agregar variables no modifica despliegues existentes: espera a que termine el
+nuevo despliegue antes de comprobarlo. Tambien puedes redesplegar ejecutando
+el workflow de GitHub Actions desde `main`.
+
+Para verificar la URL que devuelve Vercel, incluso con Deployment Protection:
+
+```powershell
+$deploymentUrl = "https://TU-DESPLIEGUE.vercel.app"
+npx vercel curl /health --deployment $deploymentUrl -- --fail --show-error
+npx vercel curl /api/info --deployment $deploymentUrl -- --fail --show-error
+npx vercel curl /api/products --deployment $deploymentUrl -- --fail --show-error
+npx vercel curl /swagger/index.html --deployment $deploymentUrl -- --fail --silent --show-error --output NUL --write-out "HTTP %{http_code}"
+```
+
+Se espera `Healthy`, el nombre/correo configurados, un catalogo JSON y HTTP 200
+en Swagger. `NUL` descarta el HTML en Windows. Para ver la interfaz abre
+`https://TU-DESPLIEGUE.vercel.app/swagger/index.html` en el navegador; inicia
+sesion en Vercel si la proteccion lo solicita.
+
+En Actions, `vercel curl` usa la variable de entorno `VERCEL_TOKEN` del job.
+No agregues `--token` a esos comandos: esta version del CLI puede reenviarlo
+al ejecutable curl y fallar con `curl: option --token: is unknown`.
+
 ## 7. Configurar GitHub Actions CI/CD
 
 1. Sube esta solucion a GitHub y usa `main` como rama de produccion.
@@ -278,6 +321,26 @@ conocidos si mas adelante necesitas reconstruir esquema/IP/origen.
 
 ## 9. Solucion de problemas
 
+- **500 FUNCTION_INVOCATION_FAILED aunque el build este verde**: un build
+  exitoso no garantiza que el proceso arranque con la configuracion de Vercel.
+  Consulta Vercel > Project > Logs o ejecuta:
+
+  ```powershell
+  npx vercel logs --environment production --since 15m --limit 50 --json
+  npx vercel env ls production
+  ```
+
+  Si los logs muestran `OptionsValidationException`, `The Name field is required`
+  o `The SupportEmail field is required`, faltan `App__Name` y
+  `App__SupportEmail` en **Production de Vercel**. Crealas siguiendo la seccion 6
+  y redespliega; los secrets del environment de GitHub no configuran la API.
+  No elimines la validacion ni agregues valores ficticios como fallback para
+  ocultar el error. El paso **Verify deployed API** del workflow comprueba
+  ahora la salud y el contrato del catalogo para detectar este caso.
+- **Smoke test falla con `curl: (56) Recv failure: Connection reset by peer`**:
+  puede ocurrir mientras el contenedor inicia. La comprobacion de salud usa
+  `--retry-all-errors` con tiempos y reintentos limitados. Si persiste, revisa
+  los logs del contenedor; no ignores el fallo ni lo conviertas en exito.
 - **Falla al arrancar**: revisa `App__Name`, `App__SupportEmail`, `PORT` y los logs.
 - **Swagger devuelve 404 en Production**: establece `Swagger__Enabled=true`
   y redespliega. Desactivalo o protegelo en APIs privadas.
