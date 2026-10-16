@@ -1,0 +1,11 @@
+.git
+.vs
+.vercel
+**/bin
+**/obj
+node_modules
+tests
+TestResults
+artifacts
+.env
+.env.*
