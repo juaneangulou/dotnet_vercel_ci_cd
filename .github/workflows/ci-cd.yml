@@ -50,7 +50,9 @@ jobs:
             --env Swagger__Enabled=true \
             clean-api:ci
           trap 'docker logs clean-api-ci; docker rm --force clean-api-ci' EXIT
-          curl --fail --retry 15 --retry-connrefused --retry-delay 2 http://localhost:8080/health
+          curl --fail --retry 15 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 2 --max-time 5 --retry-max-time 60 \
+            http://127.0.0.1:8080/health
           curl --fail http://localhost:8080/api/info
           curl --fail http://localhost:8080/openapi/v1.json
           curl --fail http://localhost:8080/swagger/index.html
